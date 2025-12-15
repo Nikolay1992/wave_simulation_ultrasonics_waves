@@ -1,0 +1,18 @@
+# config.yaml
+simulation:
+  sample_length: 60
+  sample_diameter: 30
+  source_diameter: 30
+  pore_radius: 0.001
+  porosity_percent: 1.0    # ← включите поры для проверки
+  Q: 50                     # в матрице
+  Q_pore: 45                 # ← в порах (новый параметр!)
+  wave_speed: 3600          # в матрице (м/с)
+  wave_speed_pore: 3500     # ← в порах (новый параметр!)
+  pulse_type: "berlage"
+  Nt: 1800
+  plot_interval: 100
+
+visualization:
+  save_plots: true       # ← ДОЛЖНО БЫТЬ true, иначе plot_interval игнорируется!
+  output_dir: "output/plots"
