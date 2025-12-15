@@ -23,8 +23,19 @@
 
 **Волновое уравнение с затуханием:**
 $$
-\frac{\partial^2 u}{\partial t^2} + \frac{\omega_0}{Q(\mathbf{r})} \frac{\partial u}{\partial t} = c^2(\mathbf{r}) \nabla^2 u
+\frac{\partial^2 u}{\partial t^2}
+	•	\frac{\omega_0}{Q(\mathbf{r})},\frac{\partial u}{\partial t}
+= c^2(\mathbf{r}),\nabla^2 u
 $$
+
+где:
+	•	$u(\mathbf{r}, t)$ — волновое поле;
+	•	$c(\mathbf{r})$ — скорость распространения волны;
+	•	$Q(\mathbf{r})$ — добротность (параметр затухания);
+	•	$\omega_0$ — опорная (центральная) угловая частота.
+
+Примечание
+Член $\frac{2}{r}\frac{\partial u}{\partial r}$ не включён, то есть сферическая симметрия не учитывается.
 
 - **Не включено**: член \(\frac{2}{r}\frac{\partial u}{\partial r}\) → **нет сферичности**.
 - **Схема**: явный метод конечных разностей (2-й порядок).
