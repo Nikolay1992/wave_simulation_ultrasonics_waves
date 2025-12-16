@@ -5,12 +5,12 @@ simulation:
   source_diameter: 30
   pore_radius: 0.001
   porosity_percent: 1.0    # ← включите поры для проверки
-  Q: 50                     # в матрице
-  Q_pore: 45                 # ← в порах (новый параметр!)
+  Q: 40                     # в матрице
+  Q_pore: 40                 # ← в порах (новый параметр!)
   wave_speed: 3600          # в матрице (м/с)
-  wave_speed_pore: 3500     # ← в порах (новый параметр!)
+  wave_speed_pore: 3600     # ← в порах (новый параметр!)
   pulse_type: "berlage"
-  Nt: 1800
+  Nt: 600
   plot_interval: 100
 
 visualization:
