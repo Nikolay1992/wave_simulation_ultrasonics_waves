@@ -28,11 +28,9 @@
 
 Для компоненты смещения $u_y(x,y,z,t)$ используется модифицированное волновое уравнение:
 
-$
-\frac{\partial^2 u}{\partial t^2} = c^2(\mathbf{r}) \nabla^2 u + \eta(\mathbf{r}) \frac{\partial}{\partial t} \left( \nabla^2 u \right),
+$\frac{\partial^2 u}{\partial t^2} = c^2(\mathbf{r}) \nabla^2 u + \eta(\mathbf{r}) \frac{\partial}{\partial t} \left( \nabla^2 u \right),
 \quad \text{где} \quad
-\eta(\mathbf{r}) = \frac{c^2(\mathbf{r})}{\omega_0 Q(\mathbf{r})}.
-$
+\eta(\mathbf{r}) = \frac{c^2(\mathbf{r})}{\omega_0 Q(\mathbf{r})}.$
 
 - $\omega_0 = 2\pi f_0$ — угловая частота центра импульса ($f_0 = 1~\text{МГц}$),
 - $Q(\mathbf{r})$ — локальная добротность,
@@ -63,23 +61,17 @@ $
   - $v = \partial u / \partial t$ — скорость.
 - Лапласиан вычисляется центральными разностями.
 - Временная производная $\partial_t (\nabla^2 u)$ аппроксимируется:  
-  $
-  \frac{\partial}{\partial t}(\nabla^2 u)^n \approx \frac{\nabla^2 u^n - \nabla^2 u^{n-1}}{\Delta t}.
-  $
+  $\frac{\partial}{\partial t}(\nabla^2 u)^n \approx \frac{\nabla^2 u^n - \nabla^2 u^{n-1}}{\Delta t}.$
 
 ### 3.2. Условия устойчивости
 
 Временной шаг $\Delta t$ выбирается как минимум из двух условий:
 
 1. **Куранта (для волнового члена)**:
-   $
-   \Delta t_{\text{CFL}} = \frac{0.75}{c_{\max} \sqrt{\frac{1}{\Delta x^2} + \frac{1}{\Delta y^2} + \frac{1}{\Delta z^2}}}.
-   $
+   $\Delta t_{\text{CFL}} = \frac{0.75}{c_{\max} \sqrt{\frac{1}{\Delta x^2} + \frac{1}{\Delta y^2} + \frac{1}{\Delta z^2}}}.$
 
 2. **Вязкостное (для $\eta \partial_t \nabla^2 u$)**:
-   $
-   \Delta t_{\text{visc}} = 0.75 \cdot \frac{(\Delta x)^2}{2 \eta_{\max}}.
-   $
+   $\Delta t_{\text{visc}} = 0.75 \cdot \frac{(\Delta x)^2}{2 \eta_{\max}}.$
 
 → Итоговый шаг: $\Delta t = \min(\Delta t_{\text{CFL}},\ \Delta t_{\text{visc}})$.
 
@@ -112,11 +104,9 @@ $
 
 При малой пористости (рассеяние пренебрежимо):
 
-$
-\ln\left(\frac{A_{\text{out}}}{A_{\text{in}}}\right) \approx -\frac{\pi f L}{Q c} + C
+$\ln\left(\frac{A_{\text{out}}}{A_{\text{in}}}\right) \approx -\frac{\pi f L}{Q c} + C
 \quad\Rightarrow\quad
-Q_{\text{est}} = -\frac{\pi L}{c \cdot \text{slope}},
-$
+Q_{\text{est}} = -\frac{\pi L}{c \cdot \text{slope}},$
 
 где `slope` — наклон линейной регрессии на интервале $[0.8, 1.4]~\text{МГц}$.
 
