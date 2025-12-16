@@ -22,11 +22,11 @@
 ## Уравнение и численная схема
 
 **Волновое уравнение с затуханием:**
-$$
+$
 \frac{\partial^2 u}{\partial t^2}
 	•	\frac{\omega_0}{Q(\mathbf{r})},\frac{\partial u}{\partial t}
 = c^2(\mathbf{r}),\nabla^2 u
-$$
+$
 
 где:
 	•	$u(\mathbf{r}, t)$ — волновое поле;
