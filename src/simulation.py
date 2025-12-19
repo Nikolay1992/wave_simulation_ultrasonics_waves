@@ -28,7 +28,7 @@ def load_config(config_path: str) -> dict:
         return yaml.safe_load(f)
 
 
-def save_snapshot(n: int, u: np.ndarray, x: np.ndarray, y: np.ndarray, z: np.ndarray,
+def save_snapshot(n: int, u: np.ndarray, x: np.ndarray, y: np.ndarray, z: np.ndarray, n_pore: int,
                   cylinder_mask: np.ndarray, pore_mask: np.ndarray,
                   pore_centers: list, pore_radius: float,
                   Lx: float, Ly: float, Lz: float,
@@ -54,16 +54,17 @@ def save_snapshot(n: int, u: np.ndarray, x: np.ndarray, y: np.ndarray, z: np.nda
     plt.colorbar(im, label="Смещение")
     plt.title(f"x-z (y=0, t={n*dt*1e6:.1f} мкс)")
     plt.xlabel("x (м)"); plt.ylabel("z (м)")
-
-    # Наложение пор
-    for xc, yc, zc in pore_centers:
-        ix = np.argmin(np.abs(x - xc))
-        iy = np.argmin(np.abs(y - yc))
-        if not cylinder_mask[ix, iy]:
-            continue
-        circle = plt.Circle((xc, zc), pore_radius, color='gray',
-                            fill=False, linestyle='--', linewidth=0.8)
-        plt.gca().add_patch(circle)
+    
+    if n_pore < 1000:
+        # Наложение пор
+        for xc, yc, zc in pore_centers:
+            ix = np.argmin(np.abs(x - xc))
+            iy = np.argmin(np.abs(y - yc))
+            if not cylinder_mask[ix, iy]:
+                continue
+            circle = plt.Circle((xc, zc), pore_radius, color='gray',
+                                fill=False, linestyle='--', linewidth=0.8)
+            plt.gca().add_patch(circle)
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, f"xz_step_{n:04d}.png"), dpi=150)
     plt.close()
@@ -77,14 +78,15 @@ def save_snapshot(n: int, u: np.ndarray, x: np.ndarray, y: np.ndarray, z: np.nda
     plt.title(f"x-y (z=0, t={n*dt*1e6:.1f} мкс)")
     plt.xlabel("x (м)"); plt.ylabel("y (м)")
 
-    for xc, yc, zc in pore_centers:
-        ix = np.argmin(np.abs(x - xc))
-        iy = np.argmin(np.abs(y - yc))
-        if not cylinder_mask[ix, iy]:
-            continue
-        circle = plt.Circle((xc, yc), pore_radius, color='gray',
-                            fill=False, linestyle='--', linewidth=0.8)
-        plt.gca().add_patch(circle)
+    if n_pore < 1000:
+        for xc, yc, zc in pore_centers:
+            ix = np.argmin(np.abs(x - xc))
+            iy = np.argmin(np.abs(y - yc))
+            if not cylinder_mask[ix, iy]:
+                continue
+            circle = plt.Circle((xc, yc), pore_radius, color='gray',
+                                fill=False, linestyle='--', linewidth=0.8)
+            plt.gca().add_patch(circle)
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, f"xy_step_{n:04d}.png"), dpi=150)
     plt.close()
@@ -197,41 +199,98 @@ def wave_simulation_3d(
     # --- Генерация пор ---
     pore_centers = []
     if porosity_percent > 0 and pore_radius > 0:
-        sample_volume = np.pi * (Lx**2) * Lz / 4.0
+        sample_volume = np.pi * (Lx**2) * Lz / 4.0  # объём цилиндра: D = Lx, H = Lz
         target_volume = (porosity_percent / 100.0) * sample_volume
         single_pore_volume = (4.0/3.0) * np.pi * pore_radius**3
         accumulated = 0.0
 
-        while accumulated < target_volume:
+        # Оценка числа пор (для информативности)
+        expected_n = int(np.ceil(target_volume / single_pore_volume))
+
+        pbar = tqdm(
+            total=target_volume,
+            desc="Генерация пересекающихся пор",
+            unit="vol",
+            unit_scale=True,  # для удобного отображения (k, M)
+            ncols=80,
+            bar_format='{l_bar}{bar}| {n:.2e}/{total:.2e} [{elapsed}<{remaining}, {rate_fmt}]'
+        )
+
+        attempts = 0
+        max_attempts = 10 * expected_n  # например, даём запас в 10× — на случай, если радиусы варьируются или будут ограничения позже
+
+        while accumulated < target_volume and attempts < max_attempts:
             xc = np.random.uniform(pore_radius, Lx - pore_radius)
             yc = np.random.uniform(pore_radius, Ly - pore_radius)
             zc = np.random.uniform(pore_radius, Lz - pore_radius)
 
-            # Проверка на пересечение
-            too_close = False
-            for px, py, pz in pore_centers:
-                if np.linalg.norm([xc-px, yc-py, zc-pz]) < 2 * pore_radius:
-                    too_close = True
-                    break
-            if not too_close:
-                pore_centers.append((xc, yc, zc))
-                accumulated += single_pore_volume
+            # ✅ Пересечение РАЗРЕШЕНО → пропускаем проверку!
+            pore_centers.append((xc, yc, zc))
+            accumulated += single_pore_volume
+            pbar.update(single_pore_volume)
+            attempts += 1
+
+        pbar.close()
+
+        # Диагностика
+        actual_porosity = 100 * accumulated / sample_volume
+        if accumulated < target_volume:
+            print(f"⚠️  Достигнут лимит попыток ({attempts}). "
+                  f"Фактическая пористость: {actual_porosity:.2f}% (цель: {porosity_percent}%)")
+        else:
+            n_pore = len(pore_centers)
+            print(f"✅ Сгенерировано {n_pore} пор. Пористость: {actual_porosity:.2f}%")
 
     # --- Маски: цилиндр и поры ---
     R = Lx / 2.0
     X, Y = np.meshgrid(x, y, indexing='ij')
     cylinder_mask = (X - Lx/2)**2 + (Y - Ly/2)**2 <= R**2
+    
+    # Количество вокселей ВНУТРИ цилиндра
+    num_voxels_in_cylinder = np.sum(cylinder_mask) * Nz
+    
+    print('Вокселей - ', num_voxels_in_cylinder)
 
     pore_mask = np.zeros((Nx, Ny, Nz), dtype=bool)
+    from scipy.spatial import cKDTree
+
     if pore_centers:
-        for xc, yc, zc in pore_centers:
-            dx_arr = x[:, None, None] - xc
-            dy_arr = y[None, :, None] - yc
-            dz_arr = z[None, None, :] - zc
-            dist_sq = dx_arr**2 + dy_arr**2 + dz_arr**2
-            pore_mask |= dist_sq < pore_radius**2
-        # Обрезаем поры вне цилиндра
-        pore_mask[~np.repeat(cylinder_mask[:, :, None], Nz, axis=2)] = False
+        tree = cKDTree(pore_centers)
+        ix_cyl, iy_cyl = np.where(cylinder_mask)
+        points = np.stack([
+            np.repeat(x[ix_cyl], Nz),
+            np.repeat(y[iy_cyl], Nz),
+            np.tile(z, len(ix_cyl))
+        ], axis=1)  # (M * Nz, 3)
+
+        distances, _ = tree.query(points, k=1, workers=-1)  # параллельно
+        inside = distances < pore_radius
+
+        # Запись в pore_mask
+        pore_mask[ix_cyl[:, None], iy_cyl[:, None], np.arange(Nz)] = inside.reshape(len(ix_cyl), Nz)
+        
+        # --- Вычисление ИСТИННОЙ пористости ---
+        if pore_centers:
+            # Объём одной ячейки сетки
+            dx = x[1] - x[0] if Nx > 1 else Lx
+            dy = y[1] - y[0] if Ny > 1 else Ly
+            dz = z[1] - z[0] if Nz > 1 else Lz
+            cell_volume = dx * dy * dz
+            
+            pore_voxel_count = np.count_nonzero(pore_mask)
+            pore_volume = pore_voxel_count * cell_volume
+
+            # Объём цилиндра (в тех же единицах)
+            cylinder_volume = np.pi * (Lx / 2.0)**2 * Lz  # = np.pi * R^2 * Lz
+
+            # Истинная пористость (%)
+            true_porosity_percent = 100.0 * pore_volume / cylinder_volume
+
+            print(f"✅ Истинная пористость (после учёта пересечений и формы образца): "
+                  f"{true_porosity_percent:.3f}%")
+        else:
+            true_porosity_percent = 0.0
+            print("ℹ️  Поры отсутствуют → пористость = 0%")
 
     # --- Карты материальных параметров ---
     c_map = np.full((Nx, Ny, Nz), c, dtype=np.float32)
@@ -246,8 +305,9 @@ def wave_simulation_3d(
     # --- Инициализация полей ---
     u = np.zeros((Nx, Ny, Nz), dtype=np.float64)   # смещение u(x,y,z)
     v = np.zeros((Nx, Ny, Nz), dtype=np.float64)   # скорость v = ∂u/∂t
-    mean_displacement = np.zeros(Nt, dtype=np.float64)  # ← ИСПРАВЛЕНО: Nt (не Nt-1!)
-
+    mean_displacement_s = np.zeros(Nt, dtype=np.float64)  # ← ИСПРАВЛЕНО: Nt (не Nt-1!)
+    mean_displacement_r = np.zeros(Nt, dtype=np.float64)
+    
     # --- Переменная для хранения предыдущего лапласиана (∂/∂t ∇²u) ---
     lap_u_prev = np.zeros((Nx-2, Ny-2, Nz-2), dtype=np.float64)
 
@@ -302,7 +362,8 @@ def wave_simulation_3d(
             break
 
         # 10. Запись сигнала на приёмнике (z = Lz - dz)
-        mean_displacement[n] = np.nanmean(u[:, :, -2])
+        mean_displacement_s[n] = np.nanmean(u[:, :, 0]) # источник
+        mean_displacement_r[n] = np.nanmean(u[:, :, -2]) # приемник
 
         # 11. Сохранение снимков (если включено)
         if save_plots and plot_interval > 0 and n % plot_interval == 0:
@@ -310,7 +371,7 @@ def wave_simulation_3d(
             u_snap = np.zeros((Nx, Ny, Nz, 2), dtype=np.float64)
             u_snap[:, :, :, 1] = u  # текущее u как "current"
             save_snapshot(
-                n=n, u=u_snap, x=x, y=y, z=z,
+                n=n, u=u_snap, x=x, y=y, z=z, n_pore=n_pore,
                 cylinder_mask=cylinder_mask, pore_mask=pore_mask,
                 pore_centers=pore_centers, pore_radius=pore_radius,
                 Lx=Lx, Ly=Ly, Lz=Lz, impulse=impulse,
@@ -333,4 +394,4 @@ def wave_simulation_3d(
         'dt_used': dt,
     }
 
-    return t_arr, mean_displacement, impulse, meta
+    return t_arr, mean_displacement_r, mean_displacement_s, meta

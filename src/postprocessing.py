@@ -23,16 +23,20 @@ def plot_results(t_arr, mean_displacement, impulse, meta, config):
     c = meta.get('c', 3600)  # скорость в матрице (не c_pore!)
 
     # --- 1. Сигналы во времени ---
+    t_shift = Lz / c  # задержка из-за конечной скорости
+    t_output_shifted = t_arr - t_shift  # сдвигаем временнУю ось выхода
+
     plt.figure(figsize=(9, 4))
-    plt.plot(t_arr * 1e6, mean_displacement, label='Выход (z = Lz)', alpha=0.85, linewidth=1.2)
+    plt.plot(t_output_shifted * 1e6, mean_displacement, label='Выход (z = Lz), скорректировано', alpha=0.85, linewidth=1.2)
     plt.plot(t_arr * 1e6, impulse, '--', label='Входной импульс', alpha=0.75, linewidth=1.0)
     plt.xlabel('Время, мкс')
+    plt.xlim(-5, 10)
     plt.ylabel('Смещение (условные единицы)')
-    plt.title('Входной и выходной сигналы')
+    plt.title('Входной и выходной сигналы (с компенсацией задержки)')
     plt.grid(True, alpha=0.5)
     plt.legend()
     if save_plots:
-        plt.savefig(os.path.join(output_dir, 'time_signals.png'), dpi=150, bbox_inches='tight')
+        plt.savefig(os.path.join(output_dir, 'time_signals_aligned.png'), dpi=150, bbox_inches='tight')
     plt.show()
 
     # --- 2. Амплитудные спектры (без нормировки!) ---
